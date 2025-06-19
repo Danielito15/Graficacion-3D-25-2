@@ -1,0 +1,47 @@
+#version 400 core
+
+in vec2 pass_textureCoords;
+in vec3 surfaceNormal;
+in vec3 toLightVector;
+in vec3 toCameraVector;
+
+out vec4 out_Color;
+
+uniform sampler2D modelTexture;
+uniform vec3 lightColor;
+uniform float shineDamper;
+uniform float reflectivity;
+
+void main(void)
+{
+    // Normalizar vectores
+    vec3 unitNormal = normalize(surfaceNormal);
+    vec3 unitLightVector = normalize(toLightVector);
+    vec3 unitCameraVector = normalize(toCameraVector);
+
+    // Distancia entre el fragmento y la fuente de luz
+    float distance = length(toLightVector);
+
+    // Parámetros de atenuación (puedes ajustarlos)
+    float attenuation = 1.0 / (1.0 + 0.25 * distance + 0.02 * distance * distance);
+
+    // Luz ambiental constante
+    vec3 ambient = vec3(0.1); // puedes subir este valor si se ve muy oscuro
+
+    // Luz difusa (Lambert)
+    float diff = max(dot(unitNormal, unitLightVector), 0.0);
+    vec3 diffuse = diff * lightColor * attenuation;
+
+    // Luz especular (Phong)
+    vec3 reflectedLight = reflect(-unitLightVector, unitNormal);
+    float specularFactor = max(dot(reflectedLight, unitCameraVector), 0.0);
+    float damped = pow(specularFactor, shineDamper);
+    vec3 specular = damped * reflectivity * lightColor * attenuation;
+
+    // Color base de textura
+    vec4 textureColor = texture(modelTexture, pass_textureCoords);
+
+    // Resultado final
+    vec3 totalLight = ambient + diffuse;
+    out_Color = vec4(totalLight, 1.0) * textureColor + vec4(specular, 1.0);
+}
